@@ -1,8 +1,11 @@
 ﻿using BCCAlunos2024.Models;
+using BCCAlunos2024.Models.Consultas;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using System.Data;
+
 
 namespace BCCAlunos2024.Controllers
 {
@@ -11,7 +14,7 @@ namespace BCCAlunos2024.Controllers
 
         private readonly Contexto contexto;
 
-        public ConsultasController (Contexto context)
+        public ConsultasController(Contexto context)
         {
             contexto = context;
         }
@@ -29,13 +32,13 @@ namespace BCCAlunos2024.Controllers
         }
 
 
-        public IActionResult Alunos ()
+        public IActionResult Alunos()
         {
             var alunos = contexto.Alunos.Include(c => c.curso)
-                .OrderBy(o=>o.curso.descricao)
-                .ThenByDescending(p=>p.periodo)
-                .ThenBy(o1=>o1.aniversario)
-                .ToList();  
+                .OrderBy(o => o.curso.descricao)
+                .ThenByDescending(p => p.periodo)
+                .ThenBy(o1 => o1.aniversario)
+                .ToList();
             return View(alunos);
         }
 
@@ -63,5 +66,52 @@ namespace BCCAlunos2024.Controllers
 
             return View(listaAlunos);
         }
+
+
+        public IActionResult AgruparAtendimentoPorCursoSala()
+        {
+            IEnumerable<AgruparAtendimentoCursoSala> lstAgAtCursoSala =
+
+                  from item in contexto.Atendimentos
+                   .Include(a => a.aluno).Include(c => c.aluno.curso).Include(s => s.sala)
+                   .ToList()
+                  let curso = item.aluno.curso.descricao
+                  let sala = item.sala.descricao
+                  group item by new { curso, sala }
+                  into grupo
+                  orderby grupo.Key.sala, grupo.Key.curso
+                  select new AgruparAtendimentoCursoSala
+                  {
+                      curso = grupo.Key.curso,
+                      sala = grupo.Key.sala,
+                      quantidade = grupo.Count()
+                  };
+            return View(lstAgAtCursoSala);
+        }
+
+
+        public IActionResult AgruparAtendimentoPorAnoMes() {
+
+            IEnumerable<AgruparAtendimentoPorAnoMes> lstAtAnoMes  =
+
+          from item in contexto.Atendimentos
+             .ToList()
+          let ano = item.dataHora.Year
+          let mes = item.dataHora.Month
+
+          group item by new { ano, mes }
+          into grupo
+          orderby grupo.Key.ano, grupo.Key.mes
+          select new AgruparAtendimentoPorAnoMes
+          {
+              ano = grupo.Key.ano,
+              mes = grupo.Key.mes,
+              quantidade = grupo.Count()
+          };
+            return View(lstAtAnoMes);
+
+        }
+
+
     }
 }
